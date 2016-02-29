@@ -4,12 +4,12 @@
 #include <algorithm>
 #include <random>
 #include <unordered_map>
-
+#include <unordered_set>
 
 #define dataSize 1000
 #define Dimension 128
-#define K 10
 #define pb push_back
+#define K 10
 using namespace std;
 
 struct point{
@@ -31,8 +31,8 @@ double calcDistance(int a, int b){
 }
 
 
-vector<int> R[dataSize];	// only store id   //maybe we could change to unordered_map to acclerate -> maybe we not need this array cuz  BB (not sure in parallel)
-unordered_map<int, int> BB[dataSize];	// BB[i] = B[i] U R[i]
+unordered_set<int> R[dataSize];	// only store id   
+unordered_set<int> BB[dataSize];	// BB[i] = B[i] U R[i]
 
 class myHeap{	 // in order to maintain nearest K elements, we should maintain a large-root heap of size K+1 and each time we erase the top one
 public:
@@ -69,6 +69,7 @@ public:
 		update_flag = 1;
 		if(heapSize<K){ // not full
 			capa[++heapSize]=k;
+			R[k].insert(centralPoint_id);
 			upMaintain(heapSize);
 		}
 		
@@ -76,15 +77,7 @@ public:
 			// sth problems with erase
 			rooterase();  // erase the root element
 			capa[1] = k;
-			// we should add information of new element into reserve array and BB array	BB[v] = B[v] U R[v]
-			R[k].pb(centralPoint_id); 	// reserve array
-			
-			if(BB[centralPoint_id][k]==0)	// new element not in BB array
- 				BB[centralPoint_id].insert( make_pair(k,1) );	// update BB[v] from  B[v]
-			R[k].pb(centralPoint_id);	// update Reserve array
-			if(BB[k][centralPoint_id]==0)	// update BB[new_element] from  R[new_element]
-				BB[k].insert( make_pair(centralPoint_id,1) );
-			
+			R[k].insert(centralPoint_id); 	// reserve array			
 			downMaintain();  // update heap 
 		}
 
@@ -140,12 +133,7 @@ public:
 	
 	void rooterase(){
 		int re_id = capa[1];	// erase information in reserve array 
-		//R[re_id].erase(remove(R[re_id].begin(), R[re_id].end(), centralPoint_id), R[re_id].end());	// maybe change to unordered_map
-		// also we should update our BB array!  BB[v] = B[v] U R[v]
-		if(BB[centralPoint_id].find(re_id))
-			cout<<"SUCCESS"<<endl;
-		//BB[centralPoint_id].erase(re_id); // erase element re_id in BB[id] comes from B[id]
-		//BB[re_id].erase(centralPoint_id); // erase element id in BB[re_id] comes from R[re_id]
+		R[re_id].erase(centralPoint_id);
 		return ;
 	}
 	
@@ -212,34 +200,35 @@ void init(){
 	for(int i=0;i<dataSize;i++){
 		vector<int> initial = genInit();
 		for(auto &k : initial){
-			B[i].append(k);  /* the append would be always success here cuz we only insert K elements */
-			R[k].pb(i);
+			B[i].append(k); 
 		}
 		
 	}
 	return ;
 }
 
-void work(){	// basic NN_DESCENT
+void update_set(){ // it seems that iterative time is not too many, we choose to lazy update our BB set first
 	for(int i=0;i<dataSize;i++){	// we should make it parallel work !!
 		for(int k=1;k<=B[i].heapSize;k++)
-			BB[i].insert( make_pair( B[i].capa[k],1) );
+			BB[i].insert(B[i].capa[k]);
 		for(auto &k : R[i]){
-			if(BB[i][k]==0) // no repeated element
-				BB[i].insert( make_pair(k,1) );
+			if(BB[i].find(k)==BB[i].end()) // no repeated element
+				BB[i].insert(k);
 		}	
 	}
-	// until here is ok!
-	
+	return ;
+}
+
+void work(){	// basic NN_DESCENT
+	//initial BB array  BB[i] = B[i] U R[i]
+	update_set();
 	//now we construct our initial BB array
 	int update_counter;
 	while(true){
 		update_counter = 0;
 		for(int v=0;v<dataSize;v++){ // need parallel
-			for(auto &t1 : BB[v]){
-				int u1 = t1.first;
-				for(auto &t2 : BB[u1]){
-					int u2 = t2.first;
+			for(auto &u1 : BB[v]){
+				for(auto &u2 : BB[u1]){
 					B[v].append(u2);// try to add new element u2 (from neighbor's neighbor)
 					update_counter += B[v].update_flag;
 				}
@@ -248,6 +237,7 @@ void work(){	// basic NN_DESCENT
 		if(update_counter==0)
 			break;
 		cout<<update_counter<<"####"<<endl;
+		update_set();
 	}
 	// finish NN-DESCENT
 	return ;
