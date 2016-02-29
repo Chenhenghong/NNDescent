@@ -5,7 +5,6 @@
 #include <random>
 #include <unordered_map>
 
-
 #define dataSize 1000
 #define Dimension 128
 #define K 10
@@ -59,8 +58,8 @@ public:
 		
 		//if new element farther then most large one (heap's root), and  heap is full, then it's no more need to add
 		if(heapSize==K){
-			double dist_root = calcDistance(capa[1], centralPoint_id);
-			double dist_new = calcDistance(k, centralPoint_id);
+			double dist_root = calcDistance(capa[1], capa[centralPoint_id]);
+			double dist_new = calcDistance(capa[k], capa[centralPoint_id]);
 			if(dist_new > dist_root)
 			return ;
 		}
@@ -73,7 +72,6 @@ public:
 		}
 		
 		else{
-			// sth problems with erase
 			rooterase();  // erase the root element
 			capa[1] = k;
 			// we should add information of new element into reserve array and BB array	BB[v] = B[v] U R[v]
@@ -95,8 +93,8 @@ public:
 		int x = pos;
 		while(x>1){
 			int fa = x >> 1;
-			double dist_up = calcDistance(capa[fa], centralPoint_id);
-			double dist_cur = calcDistance(capa[x], centralPoint_id);
+			double dist_up = calcDistance(capa[fa], capa[centralPoint_id]);
+			double dist_cur = calcDistance(capa[x], capa[centralPoint_id]);
 			if(dist_cur <= dist_up) // large-root heap 
 				break;
 			swap(capa[fa],capa[x]); // continue  updating
@@ -113,15 +111,15 @@ public:
 			left = cur << 1;
 			right = left | 1;
 			int rec = cur;
-			double farrdist = calcDistance(capa[cur], centralPoint_id);
-			double dist_left = calcDistance(capa[left], centralPoint_id);
+			double farrdist = calcDistance(capa[cur], capa[centralPoint_id]);
+			double dist_left = calcDistance(capa[left], capa[centralPoint_id]);
 			if(dist_left > farrdist){
 				farrdist = dist_left;
 				rec = left;
 			}
 			
 			if(right<=heapSize){
-				double dist_right = calcDistance(capa[right], centralPoint_id);
+				double dist_right = calcDistance(capa[right], capa[centralPoint_id]);
 				if(dist_right > farrdist){
 					farrdist = dist_right;
 					rec =right;
@@ -140,12 +138,10 @@ public:
 	
 	void rooterase(){
 		int re_id = capa[1];	// erase information in reserve array 
-		//R[re_id].erase(remove(R[re_id].begin(), R[re_id].end(), centralPoint_id), R[re_id].end());	// maybe change to unordered_map
+		R[re_id].erase(remove(R[re_id].begin(), R[re_id].end(), centralPoint_id), R[re_id].end());	// maybe change to unordered_map
 		// also we should update our BB array!  BB[v] = B[v] U R[v]
-		if(BB[centralPoint_id].find(re_id))
-			cout<<"SUCCESS"<<endl;
-		//BB[centralPoint_id].erase(re_id); // erase element re_id in BB[id] comes from B[id]
-		//BB[re_id].erase(centralPoint_id); // erase element id in BB[re_id] comes from R[re_id]
+		BB[centralPoint_id].erase(re_id); // erase element re_id in BB[id] comes from B[id]
+		BB[re_id].erase(centralPoint_id); // erase element id in BB[re_id] comes from R[re_id]
 		return ;
 	}
 	
@@ -157,114 +153,3 @@ public:
 
 
 myHeap B[dataSize];   //	only store id
-
-void loadData(){
-	//assume we own 100000 data with 128 size 
-	point tmp;
-	for(int i=0;i<dataSize;i++){
-		for(int k=0;k<Dimension;k++){
-			int sc;
-			scanf("%d",&sc);
-			tmp.dim[k]=sc;
-		}
-		DataSet.pb(tmp);
-	}
-	return ;
-}
-
-vector<int> genInit(){
-	//cuz K is small, we choose compare directly instead of unordered_map	
-	vector<int> tmp;
-	int sum;
-	//c++11
-	random_device rd;
-	uniform_int_distribution<int> dist(0,dataSize-1); //closed
-	bool need = true;
-	while(need){
-		bool repeat = false;
-		tmp.clear();
-		sum = 0;
-		while(sum<K){
-			tmp.pb(dist(rd));
-			sum++;
-		}
-		for(int i=0;i<tmp.size();i++){
-			for(int j=i+1;j<tmp.size();j++)
-				if(tmp[i]==tmp[j]){ // re-produce 
-					repeat = true;
-					break;
-				}
-			if(repeat)
-				break;
-		}		
-		if(!repeat)
-			need = false;
-	}
-	
-	return tmp;
-}
-
-void init(){
-	for(int i=0;i<dataSize;i++)	//initial array B
-		B[i].centralPoint_id = i;
-	
-	srand(time(NULL));// cuz K is so small
-	for(int i=0;i<dataSize;i++){
-		vector<int> initial = genInit();
-		for(auto &k : initial){
-			B[i].append(k);  /* the append would be always success here cuz we only insert K elements */
-			R[k].pb(i);
-		}
-		
-	}
-	return ;
-}
-
-void work(){	// basic NN_DESCENT
-	for(int i=0;i<dataSize;i++){	// we should make it parallel work !!
-		for(int k=1;k<=B[i].heapSize;k++)
-			BB[i].insert( make_pair( B[i].capa[k],1) );
-		for(auto &k : R[i]){
-			if(BB[i][k]==0) // no repeated element
-				BB[i].insert( make_pair(k,1) );
-		}	
-	}
-	// until here is ok!
-	
-	//now we construct our initial BB array
-	int update_counter;
-	while(true){
-		update_counter = 0;
-		for(int v=0;v<dataSize;v++){ // need parallel
-			for(auto &t1 : BB[v]){
-				int u1 = t1.first;
-				for(auto &t2 : BB[u1]){
-					int u2 = t2.first;
-					B[v].append(u2);// try to add new element u2 (from neighbor's neighbor)
-					update_counter += B[v].update_flag;
-				}
-			}
-		}
-		if(update_counter==0)
-			break;
-		cout<<update_counter<<"####"<<endl;
-	}
-	// finish NN-DESCENT
-	return ;
-}
-
-void eval(){	// to eval the acc rate of algorithm
-	return ;
-}
-
-int main(){
-	loadData();
-	puts("Finish loading...");
-	init();
-	puts("Finish initilize...");  // ok!
-	work();
-	puts("Finish algorithm...");
-	eval();
-	
-	return 0;
-}
