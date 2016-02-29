@@ -5,6 +5,7 @@
 #include <random>
 #include <unordered_map>
 #include <unordered_set>
+#include <ctime>
 
 #define dataSize 1000
 #define Dimension 128
@@ -36,10 +37,11 @@ unordered_set<int> BB[dataSize];	// BB[i] = B[i] U R[i]
 
 class myHeap{	 // in order to maintain nearest K elements, we should maintain a large-root heap of size K+1 and each time we erase the top one
 public:
-	int capa[K+2];	// only store id!!
+	pair<int, double> capa[K+2]; // id + distance
 	int heapSize;
 	int centralPoint_id; 	// cuz we build heap for each vertex, this is the identity of that vertex
 	int update_flag;
+	double dist_new;
 	
 	myHeap(){
 		heapSize = 0;
@@ -53,22 +55,23 @@ public:
 			return ;
 		
 		for(int i=1;i<=heapSize;i++){ //if new element exist?  only compare there ID, less cost
-			if(capa[i]==k)
+			if(capa[i].first==k)
 				return ;
 		}
 		
+		dist_new = calcDistance(k, centralPoint_id);
 		//if new element farther then most large one (heap's root), and  heap is full, then it's no more need to add
 		if(heapSize==K){
-			double dist_root = calcDistance(capa[1], centralPoint_id);
-			double dist_new = calcDistance(k, centralPoint_id);
-			if(dist_new > dist_root)
+			if(dist_new > capa[1].second)
 			return ;
 		}
 		
 		//otherwise heap's root should be the farthest one, we need to erase if heap is full
 		update_flag = 1;
 		if(heapSize<K){ // not full
-			capa[++heapSize]=k;
+			heapSize++;
+			capa[heapSize].first=k;
+			capa[heapSize].second=dist_new;
 			R[k].insert(centralPoint_id);
 			upMaintain(heapSize);
 		}
@@ -76,7 +79,8 @@ public:
 		else{
 			// sth problems with erase
 			rooterase();  // erase the root element
-			capa[1] = k;
+			capa[1].first = k;
+			capa[1].second = dist_new;
 			R[k].insert(centralPoint_id); 	// reserve array			
 			downMaintain();  // update heap 
 		}
@@ -88,8 +92,8 @@ public:
 		int x = pos;
 		while(x>1){
 			int fa = x >> 1;
-			double dist_up = calcDistance(capa[fa], centralPoint_id);
-			double dist_cur = calcDistance(capa[x], centralPoint_id);
+			double dist_up = capa[fa].second;
+			double dist_cur = capa[x].second;
 			if(dist_cur <= dist_up) // large-root heap 
 				break;
 			swap(capa[fa],capa[x]); // continue  updating
@@ -106,15 +110,15 @@ public:
 			left = cur << 1;
 			right = left | 1;
 			int rec = cur;
-			double farrdist = calcDistance(capa[cur], centralPoint_id);
-			double dist_left = calcDistance(capa[left], centralPoint_id);
+			double farrdist = capa[cur].second;
+			double dist_left = capa[left].second;
 			if(dist_left > farrdist){
 				farrdist = dist_left;
 				rec = left;
 			}
 			
 			if(right<=heapSize){
-				double dist_right = calcDistance(capa[right], centralPoint_id);
+				double dist_right = capa[right].second;
 				if(dist_right > farrdist){
 					farrdist = dist_right;
 					rec =right;
@@ -132,7 +136,7 @@ public:
 	}
 	
 	void rooterase(){
-		int re_id = capa[1];	// erase information in reserve array 
+		int re_id = capa[1].first;	// erase information in reserve array 
 		R[re_id].erase(centralPoint_id);
 		return ;
 	}
@@ -210,7 +214,7 @@ void init(){
 void update_set(){ // it seems that iterative time is not too many, we choose to lazy update our BB set first
 	for(int i=0;i<dataSize;i++){	// we should make it parallel work !!
 		for(int k=1;k<=B[i].heapSize;k++)
-			BB[i].insert(B[i].capa[k]);
+			BB[i].insert(B[i].capa[k].first);
 		for(auto &k : R[i]){
 			if(BB[i].find(k)==BB[i].end()) // no repeated element
 				BB[i].insert(k);
@@ -249,12 +253,14 @@ void eval(){	// to eval the acc rate of algorithm
 
 int main(){
 	loadData();
-	puts("Finish loading...");
+	auto start = clock();
+//	puts("Finish loading...");
 	init();
-	puts("Finish initilize...");  // ok!
+//	puts("Finish initilize...");  // ok!
 	work();
-	puts("Finish algorithm...");
+//	puts("Finish algorithm...");
 	eval();
-	
+	auto finish = clock();
+    cout<<(finish-start)/CLOCKS_PER_SEC<<endl;
 	return 0;
 }
