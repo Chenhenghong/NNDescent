@@ -15,7 +15,7 @@
 #define K 10
 
 // new features
-#define sampleRate 0.8
+#define sampleRate 0.7
 #define Termination 0.001
 
 using namespace std;
@@ -329,6 +329,25 @@ void work(){	// basic NN_DESCENT
 }
 
 void eval(){	// to eval the acc rate of algorithm
+	freopen("groundtruth.txt","r",stdin);
+	int hit = 0;
+	for(int i=0;i<dataSize;i++){
+		unordered_set<int> inside;
+		//read ground truth
+		for(int j=0;j<K;j++){
+			int x;
+			scanf("%d",&x);
+			inside.insert(x);
+		}
+		for(int j=0;j<K;j++){
+			int t_id = B[i].capa[j].id;
+			if(inside.find(t_id)!=inside.end())
+				hit++;
+		}	
+	}
+	
+	int total = dataSize * K;
+	printf("%.4f\n",1.0*hit / (1.0*total) );
 	return ;
 }
 
@@ -340,8 +359,9 @@ int main(){
 //	puts("Finish initilize...");  // ok!
 	work();
 //	puts("Finish algorithm...");
-	eval();
 	auto finish = clock();
     cout<<(finish-start)/CLOCKS_PER_SEC<<endl;
+	// eval acc rate
+	eval();
 	return 0;
 }

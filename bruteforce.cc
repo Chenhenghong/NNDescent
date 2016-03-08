@@ -7,6 +7,7 @@
 
 #define dataSize 10000
 #define Dimension 128
+#define K 10
 #define pb push_back
 
 using namespace std;
@@ -49,12 +50,19 @@ int main(){
 	auto start = clock();
 	for(int i=0;i<dataSize;i++){
 		for(int j=0;j<dataSize;j++){
-			element[i].pb( make_pair( calcDistance(i,j), j) );
+			if(i!=j)
+				element[i].pb( make_pair( calcDistance(i,j), j) );
 		}
 		sort(element[i].begin(),element[i].end());
 	}
 	auto finish = clock();
     cout<<(finish-start)/CLOCKS_PER_SEC<<endl;
+	freopen("groundtruth.txt","w",stdout);
+	for(int i=0;i<dataSize;i++){
+		for(int j=0;j<K;j++)
+			printf("%d ",element[i][j].second);
+		puts("");
+	}
 	return 0;
 	
 }
