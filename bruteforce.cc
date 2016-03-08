@@ -5,7 +5,7 @@
 #include <utility>
 #include <ctime>
 
-#define dataSize 1000
+#define dataSize 10000
 #define Dimension 128
 #define pb push_back
 

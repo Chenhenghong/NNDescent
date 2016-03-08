@@ -2,7 +2,7 @@
 #include <iostream>
 #include <ctime>
 
-#define dataSize 1000
+#define dataSize 10000
 #define Dimension 128
 #define Magic 256
 

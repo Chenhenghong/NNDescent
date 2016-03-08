@@ -1,8 +1,8 @@
-final: mytry.o  
-	g++ -o demo mytry.o -std=c++11
+final: NNDFULL.o  
+	g++ -o2 -o demo NNDFULL.o -std=c++11
 
-mytry.o: mytry.cc
-	g++ -c mytry.cc -std=c++11
+NNDFULL.o: NNDFULL.cc
+	g++ -c NNDFULL.cc -std=c++11
 
 clean:
 #Linux
